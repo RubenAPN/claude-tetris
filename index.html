@@ -7,6 +7,13 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <label class="theme-switch" title="Tema claro / oscuro">
+    <span aria-hidden="true">🌙</span>
+    <input type="checkbox" id="theme-toggle" role="switch" aria-label="Modo claro" />
+    <span class="slider"></span>
+    <span aria-hidden="true">☀️</span>
+  </label>
+
   <div class="wrapper">
     <div class="game-container">
       <canvas id="board" width="300" height="600"></canvas>

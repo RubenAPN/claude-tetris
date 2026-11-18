@@ -168,8 +168,22 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.globalAlpha = 1;
 }
 
+let gridColor = '#22222e';
+const themeToggle = document.getElementById('theme-toggle');
+
+function applyTheme(light) {
+  document.documentElement.dataset.theme = light ? 'light' : 'dark';
+  gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  if (current) { draw(); drawNext(); }
+}
+
+themeToggle.addEventListener('change', () => {
+  applyTheme(themeToggle.checked);
+  themeToggle.blur(); // evita que Space/flechas manipulen el switch durante la partida
+});
+
 function drawGrid() {
-  ctx.strokeStyle = '#22222e';
+  ctx.strokeStyle = gridColor;
   ctx.lineWidth = 0.5;
   for (let c = 1; c < COLS; c++) {
     ctx.beginPath();
@@ -301,4 +315,5 @@ document.addEventListener('keydown', e => {
 
 restartBtn.addEventListener('click', init);
 
+applyTheme(false); // por defecto: oscuro (sin persistencia ni prefers-color-scheme)
 init();
