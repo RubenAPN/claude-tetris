@@ -267,6 +267,7 @@ function loop(ts) {
     }
   }
   draw();
+  if (gameOver) return; // endGame() ya canceló el bucle; no volver a programarlo
   animId = requestAnimationFrame(loop);
 }
 
