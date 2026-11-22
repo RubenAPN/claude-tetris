@@ -249,7 +249,6 @@ function togglePause() {
   if (!paused) {
     hidePauseMenu();
     lastTime = performance.now();
-    dropAccum = 0;
     cancelAnimationFrame(animId);
     animId = requestAnimationFrame(loop);
   } else {
@@ -295,7 +294,10 @@ function init() {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat && !(e.target === pauseLevelSelect && e.code === 'KeyP')) togglePause();
+    return;
+  }
   if (paused && ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
     // con el menú abierto no se juega ni se desplaza la página; Space sobre un botón/select sí lo activa
     if (!pauseMenu.contains(e.target)) e.preventDefault();
