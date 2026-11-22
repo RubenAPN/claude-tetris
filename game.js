@@ -42,6 +42,7 @@ const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
 const restartBtn = document.getElementById('restart-btn');
 
+let startLevel = 1;
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId;
 
 function createBoard() {
@@ -108,7 +109,7 @@ function clearLines() {
   if (cleared) {
     lines += cleared;
     score += (LINE_SCORES[cleared] || 0) * level;
-    level = Math.floor(lines / 10) + 1;
+    level = startLevel + Math.floor(lines / 10);
     dropInterval = Math.max(100, 1000 - (level - 1) * 90);
     updateHUD();
   }
@@ -246,13 +247,13 @@ function togglePause() {
   if (gameOver) return;
   paused = !paused;
   if (!paused) {
+    hidePauseMenu();
     lastTime = performance.now();
-    loop(lastTime);
+    cancelAnimationFrame(animId);
+    animId = requestAnimationFrame(loop);
   } else {
     cancelAnimationFrame(animId);
-    overlayTitle.textContent = 'PAUSA';
-    overlayScore.textContent = '';
-    overlay.classList.remove('hidden');
+    showPauseMenu();
   }
 }
 
@@ -277,22 +278,31 @@ function init() {
   board = createBoard();
   score = 0;
   lines = 0;
-  level = 1;
+  level = startLevel;
   paused = false;
   gameOver = false;
-  dropInterval = 1000;
+  dropInterval = Math.max(100, 1000 - (level - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
   next = randomPiece();
   spawn();
   updateHUD();
   overlay.classList.add('hidden');
+  hidePauseMenu();
   cancelAnimationFrame(animId);
   animId = requestAnimationFrame(loop);
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'KeyP') { togglePause(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (!e.repeat && !(e.target === pauseLevelSelect && e.code === 'KeyP')) togglePause();
+    return;
+  }
+  if (paused && ['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) {
+    // con el menú abierto no se juega ni se desplaza la página; Space sobre un botón/select sí lo activa
+    if (!pauseMenu.contains(e.target)) e.preventDefault();
+    return;
+  }
   if (paused || gameOver) return;
   switch (e.code) {
     case 'ArrowLeft':
@@ -317,6 +327,40 @@ document.addEventListener('keydown', e => {
 });
 
 restartBtn.addEventListener('click', init);
+
+// ---- Menú de pausa ----
+const pauseMenu = document.getElementById('pause-menu');
+const pauseResumeBtn = document.getElementById('pause-resume-btn');
+const pauseRestartBtn = document.getElementById('pause-restart-btn');
+const pauseControlsBtn = document.getElementById('pause-controls-btn');
+const pauseControlsPanel = document.getElementById('pause-controls-panel');
+const pauseLevelSelect = document.getElementById('pause-start-level');
+
+for (let i = 1; i <= 15; i++) pauseLevelSelect.add(new Option(i, i));
+
+function showPauseMenu() {
+  pauseLevelSelect.value = startLevel;
+  pauseMenu.classList.remove('hidden');
+}
+
+function hidePauseMenu() {
+  pauseMenu.classList.add('hidden');
+  pauseControlsPanel.classList.add('hidden');
+  pauseControlsBtn.setAttribute('aria-expanded', 'false');
+  if (pauseMenu.contains(document.activeElement)) document.activeElement.blur();
+}
+
+pauseResumeBtn.addEventListener('click', () => { pauseResumeBtn.blur(); if (paused) togglePause(); });
+pauseRestartBtn.addEventListener('click', () => { pauseRestartBtn.blur(); init(); });
+pauseControlsBtn.addEventListener('click', () => {
+  const hidden = pauseControlsPanel.classList.toggle('hidden');
+  pauseControlsBtn.setAttribute('aria-expanded', String(!hidden));
+  pauseControlsBtn.blur();
+});
+pauseLevelSelect.addEventListener('change', () => {
+  startLevel = Math.min(15, Math.max(1, parseInt(pauseLevelSelect.value, 10) || 1));
+  pauseLevelSelect.blur();
+});
 
 applyTheme(false); // por defecto: oscuro (sin persistencia ni prefers-color-scheme)
 init();
