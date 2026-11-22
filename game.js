@@ -160,14 +160,11 @@ function updateHUD() {
 
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
-  const color = COLORS[colorIndex];
+  const skin = SKINS[currentSkin];
+  context.save();
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
-  context.globalAlpha = 1;
+  skin.draw(context, x, y, skin.colors[colorIndex], size);
+  context.restore();
 }
 
 let gridColor = '#22222e';
@@ -182,6 +179,97 @@ function applyTheme(light) {
 themeToggle.addEventListener('change', () => {
   applyTheme(themeToggle.checked);
   themeToggle.blur(); // evita que Space/flechas manipulen el switch durante la partida
+});
+
+// ---- Skins ----
+function roundedPath(context, px, py, w, h, r) {
+  context.beginPath();
+  context.moveTo(px + r, py);
+  context.arcTo(px + w, py, px + w, py + h, r);
+  context.arcTo(px + w, py + h, px, py + h, r);
+  context.arcTo(px, py + h, px, py, r);
+  context.arcTo(px, py, px + w, py, r);
+  context.closePath();
+}
+
+const SKINS = {
+  retro: {
+    colors: COLORS,
+    draw(context, x, y, color, size) {
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+    },
+  },
+  neon: {
+    colors: [null, '#00f0ff', '#fff200', '#d400ff', '#39ff14', '#ff1744', '#4d7cff', '#ff9100', '#ff4df0'],
+    draw(context, x, y, color, size) {
+      const px = x * size + 2, py = y * size + 2, s = size - 4;
+      const alphaIn = context.globalAlpha;
+      context.shadowColor = color;
+      context.shadowBlur = 12;
+      context.fillStyle = color;
+      context.globalAlpha *= 0.25;
+      context.fillRect(px, py, s, s);
+      context.globalAlpha = alphaIn;
+      context.strokeStyle = color;
+      context.lineWidth = 2;
+      context.strokeRect(px, py, s, s);
+      context.shadowBlur = 0;
+      context.shadowColor = 'transparent';
+    },
+  },
+  pastel: {
+    colors: [null, '#a8e6ef', '#fff1b8', '#d9b8e6', '#b8e6c1', '#f5b8b8', '#b8d4f5', '#fcd5a8', '#d4c1b8'],
+    draw(context, x, y, color, size) {
+      roundedPath(context, x * size + 1, y * size + 1, size - 2, size - 2, 8);
+      context.fillStyle = color;
+      context.fill();
+      context.strokeStyle = 'rgba(255,255,255,0.6)';
+      context.lineWidth = 1.5;
+      context.stroke();
+    },
+  },
+  pixel: {
+    colors: [null, '#29adff', '#ffec27', '#7e2553', '#00e436', '#ff004d', '#1d2b53', '#ffa300', '#ab5236'],
+    draw(context, x, y, color, size) {
+      const px = x * size, py = y * size, u = size / 6;
+      context.fillStyle = color;
+      context.fillRect(px, py, size, size);
+      context.fillStyle = 'rgba(255,255,255,0.25)';
+      context.fillRect(px, py, size, u);
+      context.fillRect(px, py, u, size);
+      context.fillStyle = 'rgba(0,0,0,0.3)';
+      context.fillRect(px, py + size - u, size, u);
+      context.fillRect(px + size - u, py, u, size);
+      for (let i = 1; i < 5; i++)
+        for (let j = 1; j < 5; j++)
+          if ((i + j) % 2 === 0) context.fillRect(px + i * u + u / 4, py + j * u + u / 4, u / 2, u / 2);
+    },
+  },
+};
+
+let currentSkin = 'retro';
+const skinSelect = document.getElementById('skin-select');
+
+function applySkin(name) {
+  if (!SKINS[name]) name = 'retro';
+  currentSkin = name;
+  document.documentElement.dataset.skin = name;
+  skinSelect.value = name;
+  gridColor = getComputedStyle(document.documentElement).getPropertyValue('--grid').trim();
+  if (current) { draw(); drawNext(); }
+}
+
+function loadSkin() {
+  try { return localStorage.getItem('tetris.skin'); } catch (e) { return null; }
+}
+
+skinSelect.addEventListener('change', () => {
+  applySkin(skinSelect.value);
+  try { localStorage.setItem('tetris.skin', currentSkin); } catch (e) { /* sin persistencia */ }
+  skinSelect.blur(); // evita que Space/flechas manipulen el select durante la partida
 });
 
 function drawGrid() {
@@ -319,4 +407,5 @@ document.addEventListener('keydown', e => {
 restartBtn.addEventListener('click', init);
 
 applyTheme(false); // por defecto: oscuro (sin persistencia ni prefers-color-scheme)
+applySkin(loadSkin());
 init();
